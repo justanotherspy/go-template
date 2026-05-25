@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go:*)",
+      "Bash(make:*)",
+      "Bash(golangci-lint:*)",
+      "Bash(goreleaser:*)",
+      "Bash(gopls:*)",
+      "Bash(gofmt:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  },
+  "env": {
+    "GOTOOLCHAIN": "auto",
+    "GOFLAGS": "-mod=mod"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v gopls >/dev/null 2>&1 || go install golang.org/x/tools/gopls@latest; go mod download >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

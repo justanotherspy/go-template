@@ -27,6 +27,17 @@ go.work.sum
 # env file
 .env
 
+# Build artifacts
+/bin/
+/dist/
+
+# Coverage output
+coverage.out
+coverage.html
+
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Claude Code local overrides
+.claude/settings.local.json
