@@ -7,6 +7,10 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
+    # Wait 7 days after a release before opening an update, so freshly
+    # published (and potentially compromised or buggy) versions can settle.
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - go
@@ -32,6 +36,8 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
       - github-actions

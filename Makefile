@@ -28,6 +28,7 @@ GORELEASER_VERSION    := v2.16.0
 GOTESTSUM_VERSION     := v1.13.0
 GOVULNCHECK_VERSION   := latest
 GOPLS_VERSION         := latest
+ACTIONLINT_VERSION    := latest
 
 GO    ?= go
 GOBIN := $(shell $(GO) env GOPATH)/bin
@@ -108,6 +109,13 @@ lint: golangci-lint ## Run golangci-lint
 lint-fix: golangci-lint ## Run golangci-lint with --fix
 	golangci-lint run --fix
 
+.PHONY: actionlint
+actionlint: ## Lint GitHub Actions workflows (runs shellcheck on run: blocks if present)
+	@command -v actionlint >/dev/null 2>&1 || { \
+		echo ">> installing actionlint $(ACTIONLINT_VERSION)"; \
+		$(GO) install github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION); }
+	actionlint
+
 # ---- Tests ------------------------------------------------------------------
 .PHONY: test
 test: ## Run tests with the race detector and coverage
@@ -143,6 +151,18 @@ run: ## Run the CLI (pass args via ARGS="...")
 .PHONY: vuln
 vuln: govulncheck-install ## Scan dependencies for known vulnerabilities
 	govulncheck ./...
+
+.PHONY: secrets
+secrets: ## Scan the working tree for committed secrets (requires trufflehog)
+	@command -v trufflehog >/dev/null 2>&1 || { \
+		echo ">> trufflehog not found; install from https://github.com/trufflesecurity/trufflehog"; exit 1; }
+	trufflehog --no-update filesystem . --results=verified,unknown --fail
+
+.PHONY: zizmor
+zizmor: ## Audit GitHub Actions workflows for security issues (requires zizmor; `pipx install zizmor`)
+	@command -v zizmor >/dev/null 2>&1 || { \
+		echo ">> zizmor not found; install with: pipx install zizmor"; exit 1; }
+	zizmor --min-severity=high .github/workflows
 
 .PHONY: security
 security: vuln ## Run all local security checks
