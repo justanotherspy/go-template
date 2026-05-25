@@ -17,7 +17,9 @@ repo.
 ```
 cmd/go-template/      main package; injects build info and calls internal/cli
 internal/cli/         command tree (root + subcommands), config loading
-.github/workflows/    CI, CodeQL, Semgrep, release-drafter, release, cleanup
+.github/workflows/    CI, CodeQL, Semgrep, secret-scan, zizmor, labeler,
+                      release-drafter, release, cleanup
+.github/labels.yml    canonical repo labels (synced by the labeler workflow)
 .golangci.yml         golangci-lint v2 config (linters + formatters)
 .goreleaser.yaml      GoReleaser v2 build/release config
 VERSION               single source of truth for the next release version
@@ -39,6 +41,9 @@ Run `make help` for the full list. The essentials:
 | `make build`         | Build to `./bin`                                   |
 | `make run ARGS=...`  | Run the CLI                                        |
 | `make vuln`          | govulncheck vulnerability scan                     |
+| `make secrets`       | TruffleHog secret scan of the working tree         |
+| `make zizmor`        | Audit GitHub Actions workflows (zizmor)            |
+| `make actionlint`    | Lint workflows (+ shellcheck on run: blocks)       |
 | `make release-check` | Validate `.goreleaser.yaml`                        |
 | `make snapshot`      | Local snapshot build (no publish)                  |
 | `make ci`            | What CI runs: deps + lint + test + build           |
@@ -46,7 +51,10 @@ Run `make help` for the full list. The essentials:
 ## Conventions
 
 - Go **1.25+** (module floor is `go 1.25.0`; CI tests 1.25.x and 1.26.x).
-- `GOTOOLCHAIN=auto` — the correct Go toolchain is fetched on demand.
+- `GOTOOLCHAIN=auto` — the correct Go toolchain is fetched on demand. The
+  `toolchain` directive in `go.mod` pins a patched build toolchain (the bare
+  `go 1.25.0` stdlib has vulnerabilities flagged by govulncheck); bump it when a
+  newer patch fixes a reported issue.
 - Lint must pass: `make lint`. Format with `make fmt` before committing.
 - All GitHub Actions are pinned to commit SHAs; Dependabot keeps them current.
 - Add new subcommands under `internal/cli/` and register them in `root.go`.
