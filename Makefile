@@ -175,7 +175,7 @@ release-check: goreleaser ## Validate the GoReleaser configuration
 
 .PHONY: snapshot
 snapshot: goreleaser ## Build a local snapshot release (no publish)
-	goreleaser release --snapshot --clean
+	goreleaser release --snapshot --clean --skip=sign,sbom
 
 # ---- Aggregates -------------------------------------------------------------
 .PHONY: ci

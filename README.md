@@ -35,8 +35,12 @@ linting, security scanning, and automated releases wired up from day one.
 - **Security**: CodeQL (Go), Semgrep CE uploading SARIF to code scanning, and
   govulncheck.
 - **Releases**: release-drafter + GoReleaser, driven by a `VERSION` file.
+  `checksums.txt` is cosign-signed (keyless) and each archive ships an SPDX SBOM.
+- **Distribution**: GoReleaser publishes a Homebrew cask to a shared tap, and
+  `install.sh` downloads a checksum-verified binary in one line.
 - **Dependabot** for Go modules and GitHub Actions, with update groups.
 - All GitHub Actions **pinned to commit SHAs**.
+- **Community health files**: `SECURITY.md`, `CONTRIBUTING.md`, and issue forms.
 - `gopls` LSP + `CLAUDE.md` preconfigured for Claude Code.
 
 ## Requirements
@@ -64,6 +68,64 @@ Configuration is read (in order of precedence) from flags, environment
 variables prefixed with `GO_TEMPLATE_`, and an optional config file
 (`--config`, default `$HOME/.go-template.yaml`).
 
+## Install
+
+Once your project has a published release, users can install it any of these
+ways. (Repos created from the template inherit this wiring — the binary, cask,
+and tap references are rewritten to match the new repo.)
+
+### Homebrew (macOS and Linux)
+
+```sh
+brew install --cask justanotherspy/tap/go-template
+```
+
+Or tap once, then install by short name:
+
+```sh
+brew tap justanotherspy/tap
+brew install --cask go-template
+```
+
+The cask is regenerated and pushed to
+[`justanotherspy/homebrew-tap`](https://github.com/justanotherspy/homebrew-tap)
+on every release (see [Releasing](#releasing)). Publishing requires a
+`HOMEBREW_TAP_GITHUB_TOKEN` repo secret; without it the cask push is skipped and
+the rest of the release still succeeds.
+
+### Install script
+
+Download a checksum-verified prebuilt binary (no Go toolchain needed):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/justanotherspy/go-template/main/install.sh | bash
+```
+
+Pin a version or target directory with environment variables (the prefix is the
+binary name upper-cased):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/justanotherspy/go-template/main/install.sh \
+  | GO_TEMPLATE_VERSION=v0.1.0 GO_TEMPLATE_INSTALL_DIR=/usr/local/bin bash
+```
+
+### From source
+
+```sh
+go install github.com/justanotherspy/go-template/cmd/go-template@latest
+```
+
+Prebuilt binaries are also on the
+[releases](https://github.com/justanotherspy/go-template/releases) page. Verify
+`checksums.txt` against its cosign bundle before trusting a download:
+
+```sh
+cosign verify-blob --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/justanotherspy/go-template' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  checksums.txt
+```
+
 ## Development
 
 | Command         | Purpose                          |
@@ -82,8 +144,13 @@ See [`CLAUDE.md`](CLAUDE.md) for the full layout and conventions.
 1. Bump [`VERSION`](VERSION) on `main`.
 2. release-drafter maintains a draft release tagged `v<VERSION>`.
 3. Publish the draft **as a pre-release** — this triggers tests, lint, and a
-   GoReleaser build that attaches binaries, then auto-promotes the release to
-   "latest".
+   GoReleaser build that attaches binaries, signs `checksums.txt` with cosign,
+   generates per-archive SBOMs, and (if `HOMEBREW_TAP_GITHUB_TOKEN` is set)
+   pushes the Homebrew cask, then auto-promotes the release to "latest".
+
+To enable cask publishing, add a `HOMEBREW_TAP_GITHUB_TOKEN` repository secret —
+a PAT with `contents:write` on the tap repo. The push is skipped when the secret
+is absent, so releases never fail just because cask publishing isn't configured.
 
 ## License
 
