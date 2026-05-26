@@ -19,9 +19,13 @@ cmd/go-template/      main package; injects build info and calls internal/cli
 internal/cli/         command tree (root + subcommands), config loading
 .github/workflows/    CI, CodeQL, Semgrep, secret-scan, zizmor, labeler,
                       release-drafter, release, cleanup
+.github/ISSUE_TEMPLATE/  bug-report + feature-request issue forms
 .github/labels.yml    canonical repo labels (synced by the labeler workflow)
 .golangci.yml         golangci-lint v2 config (linters + formatters)
 .goreleaser.yaml      GoReleaser v2 build/release config
+install.sh            checksum-verified prebuilt-binary installer (curl | bash)
+SECURITY.md           security policy / private vulnerability reporting
+CONTRIBUTING.md       contributor guide
 VERSION               single source of truth for the next release version
 Makefile              all developer + CI tasks
 ```
@@ -72,9 +76,28 @@ hook in `.claude/settings.json` installs it automatically for web sessions.
    version/tag come from the `VERSION` file (`v<VERSION>`).
 2. To cut a release, edit the draft and publish it **as a pre-release**.
 3. Publishing as pre-release triggers `release.yml`: it runs lint + tests, then
-   GoReleaser builds binaries and appends them to the release.
+   GoReleaser builds binaries and appends them to the release. It also:
+   - signs `checksums.txt` with **cosign** (keyless OIDC — the job has
+     `id-token: write`); verify with the published `checksums.txt.sigstore.json`,
+   - generates an **SPDX SBOM** per archive (via `syft`, installed in the job),
+   - pushes a **Homebrew cask** to `justanotherspy/homebrew-tap` when the
+     `HOMEBREW_TAP_GITHUB_TOKEN` secret is set (skipped otherwise, so a missing
+     token never fails a release).
 4. On success the release is automatically promoted (pre-release flag cleared,
    marked "latest").
 
 To release a new version, bump `VERSION` on `main` first so the draft picks up
 the new number.
+
+### Distribution / cask
+
+- `homebrew_casks` in `.goreleaser.yaml` generates the cask; the tap owner is
+  `justanotherspy` (change it to publish to a different tap). The cask name,
+  binary, homepage, and url track the repo name, so repos generated from the
+  template publish their own cask automatically.
+- `install.sh` is a standalone `curl | bash` installer that downloads the
+  matching release archive, verifies it against `checksums.txt`, and installs
+  the binary. Its override env vars (`<BINARY>_VERSION` / `<BINARY>_INSTALL_DIR`)
+  track the binary name, matching the `viper` env prefix.
+- `make snapshot` builds locally with `--skip=sign,sbom`, so cosign and syft are
+  only needed in CI.

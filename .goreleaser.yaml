@@ -49,12 +49,76 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+# Generate an SPDX SBOM per release archive (syft). The release workflow
+# installs syft; local `make snapshot` skips this (and signing) so no extra
+# tooling is needed for a local build.
+sboms:
+  - id: archives
+    artifacts: archive
+
+# Keyless-sign checksums.txt with cosign (sigstore bundle). Verify with:
+#   cosign verify-blob --bundle checksums.txt.sigstore.json \
+#     --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' \
+#     checksums.txt
+# The release workflow needs `id-token: write` for keyless OIDC signing.
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    output: true
+
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot-{{ .ShortCommit }}"
 
 # Release notes are owned by release-drafter; GoReleaser only uploads binaries.
 changelog:
   disable: true
+
+# Generate a Homebrew cask and push it to the shared tap at
+# justanotherspy/homebrew-tap, so `brew install --cask justanotherspy/tap/go-template`
+# tracks the latest release. Pushing to the tap needs a PAT
+# (HOMEBREW_TAP_GITHUB_TOKEN) since the default GITHUB_TOKEN only reaches this
+# repo. Repos generated from this template inherit the config: the cask name,
+# binary, homepage, and url are rewritten to the new repo by template-cleanup;
+# the tap owner stays justanotherspy (change it if you publish to your own tap).
+homebrew_casks:
+  - name: go-template
+    binaries:
+      - go-template
+    repository:
+      owner: justanotherspy
+      name: homebrew-tap
+      branch: main
+      token: '{{ index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}'
+    directory: Casks
+    homepage: "https://github.com/justanotherspy/go-template"
+    description: "A batteries-included template for building Go command-line tools"
+    license: MIT
+    url:
+      verified: "github.com/justanotherspy/go-template/"
+    commit_author:
+      name: github-actions[bot]
+      email: 41898282+github-actions[bot]@users.noreply.github.com
+    commit_msg_template: "chore(cask): go-template {{ .Tag }}"
+    # The release is published as a prerelease and only promoted to "latest"
+    # after artifacts attach, so force the cask push goreleaser would otherwise
+    # skip for a prerelease — but only when a tap token is configured. Without
+    # the HOMEBREW_TAP_GITHUB_TOKEN secret the push is skipped, so a release
+    # never fails just because cask publishing isn't set up.
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}false{{ else }}true{{ end }}'
+    # The binary is unsigned, so strip the Gatekeeper quarantine flag on install
+    # (macOS only; the cask also serves Homebrew on Linux, which has no xattr).
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/go-template"]
+          end
 
 release:
   mode: append

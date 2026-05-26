@@ -33,6 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Keyless cosign signing of checksums.txt uses the workflow OIDC token.
+      id-token: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -41,6 +43,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      # cosign signs checksums.txt; syft generates the per-archive SBOMs.
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
@@ -49,6 +54,10 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PAT with contents:write on justanotherspy/homebrew-tap so goreleaser
+          # can push the generated cask there. The default GITHUB_TOKEN only
+          # reaches this repo; when this secret is unset the cask push is skipped.
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
   promote:
     name: Promote to latest
