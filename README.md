@@ -41,7 +41,8 @@ linting, security scanning, and automated releases wired up from day one.
 - **Dependabot** for Go modules and GitHub Actions, with update groups.
 - All GitHub Actions **pinned to commit SHAs**.
 - **Community health files**: `SECURITY.md`, `CONTRIBUTING.md`, and issue forms.
-- `gopls` LSP + `CLAUDE.md` preconfigured for Claude Code.
+- `gopls` LSP, `CLAUDE.md`, and a curated [`.mcp.json`](#mcp-servers-claude-code)
+  preconfigured for Claude Code.
 
 ## Requirements
 
@@ -138,6 +139,27 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 | `make snapshot` | Local GoReleaser snapshot build  |
 
 See [`CLAUDE.md`](CLAUDE.md) for the full layout and conventions.
+
+## MCP servers (Claude Code)
+
+[`.mcp.json`](.mcp.json) registers a curated set of [Model Context
+Protocol](https://modelcontextprotocol.io) servers for Claude Code. They load
+automatically when you open the repo in Claude Code (run `/mcp` to authenticate
+or check status). Secrets are never committed — each server reads its token from
+an environment variable, so export the ones you use and skip the rest (a server
+with a missing token simply won't connect; the others still work).
+
+| Server | Type | What it's for | Setup |
+| ------ | ---- | ------------- | ----- |
+| `github` | remote | Issues, PRs, CI status, code search on GitHub | Export `GITHUB_MCP_TOKEN` (a [fine-grained PAT](https://github.com/settings/personal-access-tokens)), or run `/mcp` to authenticate via OAuth |
+| `linear` | remote | Find/create/update Linear issues & projects | OAuth — run `/mcp` and approve in the browser (no token needed) |
+| `context7` | remote | Up-to-date, version-specific library docs | Export `CONTEXT7_API_KEY` from [context7.com/dashboard](https://context7.com/dashboard) |
+| `sprite` | remote | [sprites.dev](https://sprites.dev) agent sandboxes | Export `SPRITES_API_TOKEN` from the Sprites dashboard (or `sprite login`) |
+| `shuck` | local | Failing CI logs, PR reviews, security alerts | Install [`shuck`](https://github.com/justanotherspy/shuck) on your `PATH` |
+| `semgrep` | local | Scan code for security vulnerabilities | Needs [`uv`](https://docs.astral.sh/uv/) (`uvx`); optional `SEMGREP_APP_TOKEN` for platform features |
+| `fly` | local | Provision & manage Fly.io apps | Install [`flyctl`](https://fly.io/docs/flyctl/) and `fly auth login`; optional `FLY_ACCESS_TOKEN` |
+
+Remove any server you don't want by deleting its entry from `.mcp.json`.
 
 ## Releasing
 
