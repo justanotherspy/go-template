@@ -155,11 +155,20 @@ with a missing token simply won't connect; the others still work).
 | `linear` | remote | Find/create/update Linear issues & projects | Export `LINEAR_API_KEY` (Linear → Settings → Security & access). Drop the `Authorization` header to use `/mcp` OAuth instead |
 | `context7` | remote | Up-to-date, version-specific library docs | Export `CONTEXT7_API_KEY` from [context7.com/dashboard](https://context7.com/dashboard) |
 | `sprite` | remote | [sprites.dev](https://sprites.dev) agent sandboxes | Export `SPRITES_API_TOKEN` from the Sprites dashboard (or `sprite login`) |
-| `shuck` | local | Failing CI logs, PR reviews, security alerts | Install [`shuck`](https://github.com/justanotherspy/shuck) on your `PATH` |
 | `semgrep` | local | Scan code for security vulnerabilities | Needs [`uv`](https://docs.astral.sh/uv/) (`uvx`); optional `SEMGREP_APP_TOKEN` for platform features |
 | `fly` | local | Provision & manage Fly.io apps | Install [`flyctl`](https://fly.io/docs/flyctl/) and `fly auth login`; optional `FLY_ACCESS_TOKEN` |
 
 Remove any server you don't want by deleting its entry from `.mcp.json`.
+
+## Claude plugins
+
+[`.claude/settings.json`](.claude/settings.json) enables the
+[`shuck`](https://github.com/justanotherspy/shuck) plugin from the central
+[`justanotherspy/claude-plugins`](https://github.com/justanotherspy/claude-plugins)
+marketplace, so it loads automatically when you open the repo in Claude Code.
+`shuck` extracts the exact failing CI step logs for a PR (plus PR reviews and
+security alerts) via a `/shuck` skill and a local MCP server; it needs the
+[`shuck`](https://github.com/justanotherspy/shuck) binary on your `PATH`.
 
 ## Releasing
 

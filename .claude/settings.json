@@ -1,4 +1,12 @@
 {
+  "extraKnownMarketplaces": {
+    "justanotherspy": {
+      "source": { "source": "github", "repo": "justanotherspy/claude-plugins" }
+    }
+  },
+  "enabledPlugins": {
+    "shuck@justanotherspy": true
+  },
   "permissions": {
     "allow": [
       "Bash(go:*)",
