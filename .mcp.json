@@ -28,10 +28,6 @@
         "Authorization": "Bearer ${SPRITES_API_TOKEN}"
       }
     },
-    "shuck": {
-      "command": "shuck",
-      "args": ["mcp"]
-    },
     "semgrep": {
       "command": "uvx",
       "args": ["semgrep-mcp"],
