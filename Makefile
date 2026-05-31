@@ -109,6 +109,14 @@ lint: golangci-lint ## Run golangci-lint
 lint-fix: golangci-lint ## Run golangci-lint with --fix
 	golangci-lint run --fix
 
+.PHONY: modernize
+modernize: ## Apply go1.26 modernizers in place (go fix)
+	$(GO) fix ./...
+
+.PHONY: modernize-check
+modernize-check: ## Report code that go fix would modernize (fails if any; CI)
+	$(GO) fix -diff ./...
+
 .PHONY: actionlint
 actionlint: ## Lint GitHub Actions workflows (runs shellcheck on run: blocks if present)
 	@command -v actionlint >/dev/null 2>&1 || { \
@@ -179,10 +187,10 @@ snapshot: goreleaser ## Build a local snapshot release (no publish)
 
 # ---- Aggregates -------------------------------------------------------------
 .PHONY: ci
-ci: deps lint test build ## Run the pipeline that CI runs
+ci: deps lint modernize-check test build ## Run the pipeline that CI runs
 
 .PHONY: all
-all: tidy fmt lint test build ## Tidy, format, lint, test, and build
+all: tidy fmt modernize lint test build ## Tidy, format, modernize, lint, test, and build
 
 .PHONY: clean
 clean: ## Remove build artifacts

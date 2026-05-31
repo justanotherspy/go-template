@@ -1,11 +1,12 @@
 module github.com/justanotherspy/go-template
 
-go 1.25.0
+go 1.26.0
 
-// Build with a patched toolchain: the go 1.25.0 stdlib has known
-// vulnerabilities (GO-2025-4007/4009/4010/4011, GO-2026-4601/4602) that are
-// reachable from the CLI. go1.25.10 fixes them; the floor stays at 1.25.0.
-toolchain go1.25.10
+// Build with a patched toolchain: a bare go 1.26.0 stdlib can carry known
+// vulnerabilities reachable from the CLI. The pinned toolchain below fixes the
+// issues flagged by govulncheck; the module floor stays at 1.26.0. Bump this
+// when a newer patch release fixes a reported issue (re-run `make vuln`).
+toolchain go1.26.3
 
 require (
 	github.com/spf13/cobra v1.10.2

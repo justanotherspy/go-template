@@ -41,6 +41,8 @@ Run `make help` for the full list. The essentials:
 | `make check-tools`   | Verify required tools are installed                |
 | `make lint`          | Run golangci-lint v2                               |
 | `make fmt`           | Format (gofmt + goimports via golangci-lint)       |
+| `make modernize`     | Apply go1.26 modernizers in place (`go fix`)       |
+| `make modernize-check` | Report (don't apply) code `go fix` would modernize |
 | `make test`          | Tests with race detector + coverage                |
 | `make build`         | Build to `./bin`                                   |
 | `make run ARGS=...`  | Run the CLI                                        |
@@ -50,16 +52,22 @@ Run `make help` for the full list. The essentials:
 | `make actionlint`    | Lint workflows (+ shellcheck on run: blocks)       |
 | `make release-check` | Validate `.goreleaser.yaml`                        |
 | `make snapshot`      | Local snapshot build (no publish)                  |
-| `make ci`            | What CI runs: deps + lint + test + build           |
+| `make ci`            | What CI runs: deps + lint + modernize + test + build |
 
 ## Conventions
 
-- Go **1.25+** (module floor is `go 1.25.0`; CI tests 1.25.x and 1.26.x).
+- Go **1.26+** (module floor is `go 1.26.0`; CI tests 1.26.x).
 - `GOTOOLCHAIN=auto` — the correct Go toolchain is fetched on demand. The
-  `toolchain` directive in `go.mod` pins a patched build toolchain (the bare
-  `go 1.25.0` stdlib has vulnerabilities flagged by govulncheck); bump it when a
-  newer patch fixes a reported issue.
+  `toolchain` directive in `go.mod` pins a patched build toolchain (a bare
+  `go 1.26.0` stdlib can carry vulnerabilities flagged by govulncheck); bump it
+  when a newer patch fixes a reported issue.
 - Lint must pass: `make lint`. Format with `make fmt` before committing.
+- Code is kept modern with `go fix`: Go 1.26 rewrote `go fix` to run the
+  [`modernize`](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/modernize)
+  analyzer suite (e.g. `any`, `minmax`, `rangeint`, `slicescontains`,
+  `stringscut`, `newexpr`). `make modernize` applies the fixes; CI runs
+  `make modernize-check` (`go fix -diff`, which exits non-zero on any diff), so
+  the tree must stay modernized. Run `go tool fix help` to list the fixers.
 - All GitHub Actions are pinned to commit SHAs; Dependabot keeps them current.
 - Add new subcommands under `internal/cli/` and register them in `root.go`.
 - Build metadata (`version`, `commit`, `date`) lives in `package main` and is
