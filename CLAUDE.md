@@ -17,8 +17,9 @@ repo.
 ```
 cmd/go-template/      main package; injects build info and calls internal/cli
 internal/cli/         command tree (root + subcommands), config loading
-.github/workflows/    CI, CodeQL, Semgrep, secret-scan, zizmor, labeler,
-                      release-drafter, release, cleanup
+internal/examples/    reference tests: fuzzing, benchmarks, testing/synctest
+.github/workflows/    CI, fuzz (nightly), CodeQL, Semgrep, secret-scan, zizmor,
+                      labeler, release-drafter, release, cleanup
 .github/ISSUE_TEMPLATE/  bug-report + feature-request issue forms
 .github/labels.yml    canonical repo labels (synced by the labeler workflow)
 .golangci.yml         golangci-lint v2 config (linters + formatters)
@@ -44,6 +45,13 @@ Run `make help` for the full list. The essentials:
 | `make modernize`     | Apply go1.26 modernizers in place (`go fix`)       |
 | `make modernize-check` | Report (don't apply) code `go fix` would modernize |
 | `make test`          | Tests with race detector + coverage                |
+| `make cover-report`  | Markdown coverage report (CI posts it on PRs)      |
+| `make fuzz FUZZ=Fuzz…` | Actively fuzz one target (FUZZTIME, FUZZPKG)      |
+| `make fuzz-all`      | Briefly fuzz every target (nightly workflow)       |
+| `make bench`         | Run benchmarks (BENCH, BENCHPKG, BENCHTIME)        |
+| `make bench-save` / `make benchstat-cmp` | Sample benchmarks → compare with benchstat |
+| `make profile`       | Write CPU+mem profiles for a benchmark             |
+| `make pprof-cpu` / `make pprof-mem` | Open a profile in the pprof web UI  |
 | `make build`         | Build to `./bin`                                   |
 | `make run ARGS=...`  | Run the CLI                                        |
 | `make vuln`          | govulncheck vulnerability scan                     |
@@ -72,6 +80,47 @@ Run `make help` for the full list. The essentials:
 - Add new subcommands under `internal/cli/` and register them in `root.go`.
 - Build metadata (`version`, `commit`, `date`) lives in `package main` and is
   injected via `-ldflags`. Update the user-facing version in the `VERSION` file.
+
+## Testing, fuzzing & profiling
+
+`internal/examples/` is reference code — it demonstrates each convention below
+on a tiny pure function (`NormalizeKey`) and a tiny concurrency helper
+(`PollUntil`). Replace or delete it when you build real packages; nothing else
+imports it.
+
+- **Coverage on PRs.** `make test` writes `coverage.out`; `make cover-report`
+  renders it as Markdown. CI (`ci.yml`) publishes that report to the job summary
+  and posts/updates one sticky comment per PR via GitHub's REST API
+  (`GITHUB_TOKEN` + `curl`/`jq` — no third-party action or SaaS account). It is
+  **report-only**: coverage never fails the build. To gate later, compare
+  `make cover-total` against a threshold in the workflow.
+- **Fuzzing.** Write `FuzzXxx(f *testing.F)` targets next to the code; seed them
+  with `f.Add(...)` for representative inputs and assert *invariants*, not fixed
+  outputs (see `FuzzNormalizeKey`). Seeds run as ordinary unit tests under
+  `make test`, so invariants are checked on every PR. `make fuzz FUZZ=FuzzXxx`
+  does active mutation fuzzing locally; the nightly **`fuzz.yml`** workflow runs
+  `make fuzz-all` (auto-discovers every target). A crasher is minimized into
+  `testdata/fuzz/<FuzzXxx>/` — **commit it as a regression seed**, then fix the
+  bug.
+- **Concurrency with `testing/synctest`.** Stable since Go 1.25; the old
+  `synctest.Run` was removed in 1.26 — always use **`synctest.Test(t, func(t
+  *testing.T){…})`** with `synctest.Wait()`. It runs goroutines in an isolated
+  "bubble" with a fake clock, so time-dependent concurrent code is deterministic
+  and instant (no real sleeps, no flakes). Keep these at the unit layer: no real
+  network, processes, or goroutines started outside the bubble. See
+  `synctest_test.go`.
+- **Benchmarks & profiling.** Use the modern **`for b.Loop() { … }`** form
+  (Go 1.24+) with `b.ReportAllocs()`; it keeps setup out of the timed region and
+  prevents dead-code elimination. `make bench` runs them; `make profile`
+  captures CPU+mem profiles and `make pprof-cpu`/`pprof-mem` open them (the
+  Go 1.26 pprof web UI defaults to the flame-graph view). For before/after
+  comparisons, `make bench-save BENCHFILE=bench-old.txt` on the base revision,
+  again as `bench-new.txt`, then `make benchstat-cmp`.
+- **Go 1.26 goroutine-leak profile (experimental).** Build/run with
+  `GOEXPERIMENT=goroutineleakprofile` to enable the `goroutineleak` profile in
+  `runtime/pprof` (and the `/debug/pprof/goroutineleak` endpoint) — it reports
+  goroutines blocked on primitives that can never unblock. Handy when chasing a
+  leak; pair it with `make test` (which already runs the race detector).
 
 ## Tooling / LSP
 

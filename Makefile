@@ -29,11 +29,28 @@ GOTESTSUM_VERSION     := v1.13.0
 GOVULNCHECK_VERSION   := latest
 GOPLS_VERSION         := latest
 ACTIONLINT_VERSION    := latest
+BENCHSTAT_VERSION     := latest
 
 GO    ?= go
 GOBIN := $(shell $(GO) env GOPATH)/bin
 export GOTOOLCHAIN ?= auto
 export PATH := $(GOBIN):$(PATH)
+
+# ---- Test / benchmark / fuzz / profile knobs --------------------------------
+# Override on the command line, e.g. `make bench BENCH=BenchmarkParse`.
+# (Keep these free of trailing inline comments: Make bakes the trailing
+# whitespace into the value, which corrupts paths and flags.)
+FUZZ        ?=
+FUZZPKG     ?= ./...
+FUZZTIME    ?= 30s
+FUZZTIME_CI ?= 1m
+BENCH       ?= .
+BENCHPKG    ?= ./...
+BENCHTIME   ?= 1s
+BENCHCOUNT  ?= 6
+BENCHFILE   ?= bench-new.txt
+PROFPKG     ?= ./internal/examples
+PROFILE_DIR ?= profiles
 
 # ==============================================================================
 .PHONY: help
@@ -51,7 +68,7 @@ tidy: ## Tidy go.mod and go.sum
 	$(GO) mod tidy
 
 .PHONY: tools
-tools: golangci-lint goreleaser gotestsum govulncheck lsp ## Install all pinned dev tools
+tools: golangci-lint goreleaser gotestsum govulncheck lsp benchstat ## Install all pinned dev tools
 
 .PHONY: check-tools
 check-tools: ## Verify required tools are installed
@@ -91,6 +108,12 @@ lsp: ## Install gopls (Go language server for editors & Claude Code)
 	@command -v gopls >/dev/null 2>&1 || { \
 		echo ">> installing gopls $(GOPLS_VERSION)"; \
 		$(GO) install golang.org/x/tools/gopls@$(GOPLS_VERSION); }
+
+.PHONY: benchstat
+benchstat: ## Install benchstat (benchmark comparison) if missing
+	@command -v benchstat >/dev/null 2>&1 || { \
+		echo ">> installing benchstat $(BENCHSTAT_VERSION)"; \
+		$(GO) install golang.org/x/perf/cmd/benchstat@$(BENCHSTAT_VERSION); }
 
 # ---- Quality ----------------------------------------------------------------
 .PHONY: fmt
@@ -140,6 +163,68 @@ cover: test ## Print per-function coverage summary
 .PHONY: cover-html
 cover-html: test ## Open the HTML coverage report
 	$(GO) tool cover -html=$(COVERAGE)
+
+.PHONY: cover-total
+cover-total: ## Print the total coverage percentage (needs an existing coverage.out)
+	@$(GO) tool cover -func=$(COVERAGE) | awk '/^total:/ {print $$3}'
+
+.PHONY: cover-report
+cover-report: ## Emit a Markdown coverage report to stdout (used by CI to comment on PRs)
+	@total=$$($(GO) tool cover -func=$(COVERAGE) | awk '/^total:/ {print $$3}'); \
+	printf '### 🧪 Code coverage: %s\n\n' "$$total"; \
+	printf '<details><summary>Per-function coverage</summary>\n\n'; \
+	printf '```\n'; \
+	$(GO) tool cover -func=$(COVERAGE); \
+	printf '```\n\n</details>\n'
+
+# ---- Fuzzing ----------------------------------------------------------------
+# Seed corpora run as ordinary unit tests under `make test`. These targets do
+# active, mutation-based fuzzing; crashers are written to testdata/fuzz/<Fuzz>/
+# next to the test — commit them as regression seeds.
+.PHONY: fuzz
+fuzz: ## Actively fuzz ONE target: make fuzz FUZZ=FuzzName [FUZZPKG=./pkg FUZZTIME=1m]
+	@if [ -z "$(FUZZ)" ]; then echo ">> set FUZZ=FuzzName (a single fuzz target)"; exit 2; fi
+	$(GO) test -run '^$$' -fuzz '^$(FUZZ)$$' -fuzztime $(FUZZTIME) $(FUZZPKG)
+
+.PHONY: fuzz-all
+fuzz-all: ## Briefly fuzz every target in the module (used by the nightly workflow)
+	@set -euo pipefail; \
+	for pkg in $$($(GO) list ./...); do \
+		for fn in $$($(GO) test -list '^Fuzz' $$pkg 2>/dev/null | grep -E '^Fuzz' || true); do \
+			echo ">> fuzzing $$fn ($$pkg) for $(FUZZTIME_CI)"; \
+			$(GO) test -run '^$$' -fuzz "^$$fn$$" -fuzztime $(FUZZTIME_CI) $$pkg; \
+		done; \
+	done
+
+# ---- Benchmarks & profiling -------------------------------------------------
+.PHONY: bench
+bench: ## Run benchmarks: make bench [BENCH=BenchmarkX BENCHPKG=./... BENCHTIME=1s]
+	$(GO) test -run '^$$' -bench '$(BENCH)' -benchmem -benchtime $(BENCHTIME) $(BENCHPKG)
+
+.PHONY: bench-save
+bench-save: ## Run benchmarks BENCHCOUNT times into BENCHFILE (for benchstat)
+	$(GO) test -run '^$$' -bench '$(BENCH)' -benchmem -count=$(BENCHCOUNT) $(BENCHPKG) | tee $(BENCHFILE)
+
+.PHONY: benchstat-cmp
+benchstat-cmp: benchstat ## Compare bench-old.txt vs bench-new.txt with benchstat
+	benchstat bench-old.txt bench-new.txt
+
+.PHONY: profile
+profile: ## CPU+mem profile a benchmark into PROFILE_DIR: make profile BENCH=BenchmarkX
+	@mkdir -p $(PROFILE_DIR)
+	$(GO) test -run '^$$' -bench '$(BENCH)' -benchmem \
+		-cpuprofile $(PROFILE_DIR)/cpu.prof \
+		-memprofile $(PROFILE_DIR)/mem.prof \
+		-o $(PROFILE_DIR)/bench.test $(PROFPKG)
+	@echo ">> open: make pprof-cpu   (or)   go tool pprof -http=: $(PROFILE_DIR)/cpu.prof"
+
+.PHONY: pprof-cpu
+pprof-cpu: ## Open the CPU profile in the pprof web UI (defaults to the flame graph)
+	$(GO) tool pprof -http=: $(PROFILE_DIR)/cpu.prof
+
+.PHONY: pprof-mem
+pprof-mem: ## Open the memory profile in the pprof web UI
+	$(GO) tool pprof -http=: $(PROFILE_DIR)/mem.prof
 
 # ---- Build / run ------------------------------------------------------------
 .PHONY: build
@@ -194,4 +279,4 @@ all: tidy fmt modernize lint test build ## Tidy, format, modernize, lint, test, 
 
 .PHONY: clean
 clean: ## Remove build artifacts
-	rm -rf $(BIN_DIR) $(DIST_DIR) $(COVERAGE)
+	rm -rf $(BIN_DIR) $(DIST_DIR) $(COVERAGE) $(PROFILE_DIR) bench-*.txt *.prof *.test

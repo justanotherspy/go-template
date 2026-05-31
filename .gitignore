@@ -17,6 +17,11 @@ coverage.*
 *.coverprofile
 profile.cov
 
+# Benchmark + profiling artifacts (make bench-save / make profile)
+*.prof
+/profiles/
+bench-*.txt
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 

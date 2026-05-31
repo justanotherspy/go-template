@@ -31,6 +31,12 @@ jobs:
   test:
     name: Test (Go ${{ matrix.go }})
     runs-on: ubuntu-latest
+    # pull-requests: write lets the coverage step post/update a PR comment.
+    # The token is read-only on fork PRs, so that step is guarded to same-repo
+    # PRs below; coverage still lands in the job summary either way.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +49,39 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - run: make test
-      - run: go tool cover -func=coverage.out
+      - name: Coverage report (job summary)
+        run: make cover-report | tee coverage-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment coverage on PR
+        # Skip on fork PRs (read-only token) and on pushes to main.
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          marker='<!-- coverage-report -->'
+          body="$(printf '%s\n%s' "$marker" "$(cat coverage-report.md)")"
+          api="https://api.github.com/repos/$REPO"
+          auth="Authorization: Bearer $GH_TOKEN"
+          accept="Accept: application/vnd.github+json"
+          # Reuse the existing sticky comment (found by its hidden marker) so
+          # each push updates one comment instead of stacking new ones.
+          existing="$(curl -fsS -H "$auth" -H "$accept" \
+            "$api/issues/$PR_NUMBER/comments?per_page=100" \
+            | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty')"
+          payload="$(jq -n --arg body "$body" '{body: $body}')"
+          if [ -n "$existing" ]; then
+            curl -fsS -X PATCH -H "$auth" -H "$accept" \
+              "$api/issues/comments/$existing" -d "$payload" >/dev/null
+            echo "Updated coverage comment on PR #$PR_NUMBER"
+          else
+            curl -fsS -X POST -H "$auth" -H "$accept" \
+              "$api/issues/$PR_NUMBER/comments" -d "$payload" >/dev/null
+            echo "Created coverage comment on PR #$PR_NUMBER"
+          fi
 
   build:
     name: Build
