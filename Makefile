@@ -155,13 +155,29 @@ actionlint: ## Lint GitHub Actions workflows (runs shellcheck on run: blocks if 
 	actionlint
 
 # ---- Tests ------------------------------------------------------------------
+# Coverage excludes pure entrypoints that aren't unit-tested by design: the
+# cmd/* main packages (the binary and the gen-docs doc generator). Override the
+# pattern (an extended regexp matched against coverage.out paths) to change it,
+# e.g. `make test COVER_EXCLUDE='/cmd/|/internal/examples/'`.
+COVER_EXCLUDE ?= /cmd/
+
+# Drop excluded files from the profile in place, preserving the leading
+# `mode:` line. No-op when COVER_EXCLUDE is empty.
+define filter_coverage
+	@if [ -n "$(COVER_EXCLUDE)" ] && [ -f "$(COVERAGE)" ]; then \
+		grep -v -E "$(COVER_EXCLUDE)" "$(COVERAGE)" > "$(COVERAGE).tmp" && mv "$(COVERAGE).tmp" "$(COVERAGE)"; \
+	fi
+endef
+
 .PHONY: test
 test: ## Run tests with the race detector and coverage
 	$(GO) test -race -covermode=atomic -coverprofile=$(COVERAGE) ./...
+	$(filter_coverage)
 
 .PHONY: test-pretty
 test-pretty: gotestsum ## Run tests with pretty output (gotestsum)
 	gotestsum -- -race -covermode=atomic -coverprofile=$(COVERAGE) ./...
+	$(filter_coverage)
 
 .PHONY: cover
 cover: test ## Print per-function coverage summary
