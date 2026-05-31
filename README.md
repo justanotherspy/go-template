@@ -143,9 +143,13 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 | `make fmt`      | Format code                      |
 | `make modernize`| Apply `go fix` modernizers       |
 | `make test`     | Run tests with race + coverage   |
+| `make cover-report` / `make cover-total` | Markdown coverage report / total % |
 | `make fuzz FUZZ=Fuzz…` | Actively fuzz one target  |
+| `make fuzz-all` | Briefly fuzz every target        |
 | `make bench`    | Run benchmarks                   |
+| `make bench-save` / `make benchstat-cmp` | Sample benchmarks → compare with benchstat |
 | `make profile`  | CPU+mem profile a benchmark      |
+| `make pprof-cpu` / `make pprof-mem` | Open a profile in the pprof web UI |
 | `make build`    | Build the binary into `./bin`    |
 | `make vuln`     | Vulnerability scan (govulncheck) |
 | `make snapshot` | Local GoReleaser snapshot build  |
