@@ -30,9 +30,12 @@ linting, security scanning, and automated releases wired up from day one.
 - **Makefile** covering deps, tools, lint, format, test, build, run, security,
   and release tasks. `make help` lists everything.
 - **golangci-lint v2** with a curated linter + formatter set.
-- **CI** (`ci.yml`): lint, test matrix (Go 1.26.x), build, govulncheck, and a
-  `go mod tidy` check. Each PR gets a **sticky code-coverage comment** (and a job
-  summary) generated from `go tool cover` — no third-party service or account.
+- **`go fix` modernizers** (Go 1.26): `make modernize` rewrites code to current
+  idioms (`any`, `minmax`, `rangeint`, …); CI enforces it stays modernized.
+- **CI** (`ci.yml`): lint, a **`go fix` modernizer check**, test matrix
+  (Go 1.26.x), build, govulncheck, and a `go mod tidy` check. Each PR gets a
+  **sticky code-coverage comment** (and a job summary) generated from
+  `go tool cover` — no third-party service or account.
 - **Testing standards** (`internal/examples/`): native **fuzzing** (with a
   nightly `fuzz.yml` workflow), deterministic concurrency tests via
   **`testing/synctest`**, and **benchmarks/profiling** (`b.Loop`, pprof,
@@ -51,14 +54,14 @@ linting, security scanning, and automated releases wired up from day one.
 
 ## Requirements
 
-- Go 1.25 or newer (`GOTOOLCHAIN=auto` will fetch the right toolchain).
+- Go 1.26 or newer (`GOTOOLCHAIN=auto` will fetch the right toolchain).
 - `make`.
 
 ## Quick start
 
 ```sh
 make tools     # install dev tooling (golangci-lint, goreleaser, gopls, …)
-make ci        # deps + lint + test + build
+make ci        # deps + lint + modernize-check + test + build
 make run ARGS="version"
 ```
 
@@ -138,6 +141,7 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 | --------------- | -------------------------------- |
 | `make lint`     | Run golangci-lint                |
 | `make fmt`      | Format code                      |
+| `make modernize`| Apply `go fix` modernizers       |
 | `make test`     | Run tests with race + coverage   |
 | `make fuzz FUZZ=Fuzz…` | Actively fuzz one target  |
 | `make bench`    | Run benchmarks                   |
