@@ -30,8 +30,13 @@ linting, security scanning, and automated releases wired up from day one.
 - **Makefile** covering deps, tools, lint, format, test, build, run, security,
   and release tasks. `make help` lists everything.
 - **golangci-lint v2** with a curated linter + formatter set.
-- **CI** (`ci.yml`): lint, test matrix (Go 1.25.x / 1.26.x), build, govulncheck,
-  and a `go mod tidy` check.
+- **CI** (`ci.yml`): lint, test matrix (Go 1.26.x), build, govulncheck, and a
+  `go mod tidy` check. Each PR gets a **sticky code-coverage comment** (and a job
+  summary) generated from `go tool cover` — no third-party service or account.
+- **Testing standards** (`internal/examples/`): native **fuzzing** (with a
+  nightly `fuzz.yml` workflow), deterministic concurrency tests via
+  **`testing/synctest`**, and **benchmarks/profiling** (`b.Loop`, pprof,
+  benchstat). See [`CLAUDE.md`](CLAUDE.md#testing-fuzzing--profiling).
 - **Security**: CodeQL (Go), Semgrep CE uploading SARIF to code scanning, and
   govulncheck.
 - **Releases**: release-drafter + GoReleaser, driven by a `VERSION` file.
@@ -134,6 +139,9 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 | `make lint`     | Run golangci-lint                |
 | `make fmt`      | Format code                      |
 | `make test`     | Run tests with race + coverage   |
+| `make fuzz FUZZ=Fuzz…` | Actively fuzz one target  |
+| `make bench`    | Run benchmarks                   |
+| `make profile`  | CPU+mem profile a benchmark      |
 | `make build`    | Build the binary into `./bin`    |
 | `make vuln`     | Vulnerability scan (govulncheck) |
 | `make snapshot` | Local GoReleaser snapshot build  |
