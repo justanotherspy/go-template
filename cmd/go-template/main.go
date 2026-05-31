@@ -20,7 +20,7 @@ var (
 
 func main() {
 	// Cancel the root context on Ctrl-C / SIGTERM so long-running commands can
-	// shut down cleanly; stop() restores the default signal behaviour.
+	// shut down cleanly; stop() restores the default signal behavior.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

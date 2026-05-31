@@ -36,7 +36,7 @@ func loggerFrom(ctx context.Context) *slog.Logger {
 }
 
 // setupLogging builds a *slog.Logger from the resolved configuration. Values
-// come from viper, so they honour the precedence wired up in initConfig:
+// come from viper, so they honor the precedence wired up in initConfig:
 // flags > GO_TEMPLATE_ env vars > config file > defaults. The --verbose shortcut
 // forces debug level regardless of --log-level. Logs are written to w (stderr),
 // keeping stdout clean for the command's actual output.
@@ -59,7 +59,7 @@ func setupLogging(w io.Writer) *slog.Logger {
 }
 
 // parseLevel maps a human-friendly level name to a slog.Level, defaulting to
-// info for empty or unrecognised values.
+// info for empty or unrecognized values.
 func parseLevel(s string) slog.Level {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "debug":

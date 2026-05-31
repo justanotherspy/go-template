@@ -14,7 +14,6 @@ package cli_test
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/rogpeppe/go-internal/testscript"
@@ -25,18 +24,17 @@ import (
 // TestMain lets the test binary masquerade as the `go-template` command when
 // invoked by testscript, and otherwise runs the normal test suite.
 func TestMain(m *testing.M) {
-	os.Exit(testscript.RunMain(m, map[string]func() int{
-		"go-template": func() int {
-			// cli.Execute calls os.Exit itself on error; on success it returns
-			// and we report a clean exit code to testscript.
+	testscript.Main(m, map[string]func(){
+		"go-template": func() {
+			// cli.Execute calls os.Exit itself (non-zero on error); on success
+			// it returns and testscript records a clean exit.
 			cli.Execute(context.Background(), cli.BuildInfo{
 				Version: "e2e",
 				Commit:  "testcommit",
 				Date:    "2026-01-01",
 			})
-			return 0
 		},
-	}))
+	})
 }
 
 // TestScripts runs every testdata/script/*.txtar scenario.
