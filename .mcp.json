@@ -41,6 +41,13 @@
       "env": {
         "FLY_API_TOKEN": "${FLY_API_TOKEN:-}"
       }
+    },
+    "shuck": {
+      "command": "shuck",
+      "args": ["mcp"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
     }
   }
 }
