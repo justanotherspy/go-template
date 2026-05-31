@@ -139,12 +139,12 @@ main() {
   [ "$got" = "$expected" ] || die "checksum mismatch for $archive (expected $expected, got $got)"
   log "checksum verified"
 
-  # Extract just the binary.
+  # Extract the archive (binary plus bundled man page / completions).
   case "$ext" in
-    tar.gz) tar -xzf "$tmpd/$archive" -C "$tmpd" "$binname" ;;
+    tar.gz) tar -xzf "$tmpd/$archive" -C "$tmpd" ;;
     zip)
       need_cmd unzip || die "need 'unzip' to extract $archive"
-      unzip -oq "$tmpd/$archive" "$binname" -d "$tmpd"
+      unzip -oq "$tmpd/$archive" -d "$tmpd"
       ;;
   esac
   [ -f "$tmpd/$binname" ] || die "$binname not found inside $archive"
@@ -165,6 +165,23 @@ main() {
     *":$dir:"*) ;;
     *) log "note: $dir is not on your PATH; add it to use '$BINARY' directly" ;;
   esac
+
+  # Best-effort extras: the release archive also bundles a man page and shell
+  # completions. Installing them is a nice-to-have, so never fail on them.
+  local man_dir
+  if [ -f "$tmpd/man/${BINARY}.1" ]; then
+    man_dir="$(dirname "$dir")/share/man/man1"
+    if mkdir -p "$man_dir" 2>/dev/null && cp "$tmpd/man/${BINARY}.1" "$man_dir/" 2>/dev/null; then
+      log "installed man page to $man_dir/${BINARY}.1"
+    else
+      man_dir="$HOME/.local/share/man/man1"
+      mkdir -p "$man_dir" 2>/dev/null && cp "$tmpd/man/${BINARY}.1" "$man_dir/" 2>/dev/null \
+        && log "installed man page to $man_dir/${BINARY}.1" || true
+    fi
+  fi
+  if [ -d "$tmpd/completions" ]; then
+    log "shell completions are bundled in the archive (completions/); or run '$BINARY completion <shell>'"
+  fi
 }
 
 main "$@"

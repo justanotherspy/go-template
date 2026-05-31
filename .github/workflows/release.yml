@@ -36,6 +36,8 @@ jobs:
       contents: write
       # Keyless cosign signing of checksums.txt uses the workflow OIDC token.
       id-token: write
+      # SLSA build-provenance attestation for the released artifacts.
+      attestations: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -60,6 +62,13 @@ jobs:
           # can push the generated cask there. The default GITHUB_TOKEN only
           # reaches this repo; when this secret is unset the cask push is skipped.
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+      # Generate SLSA build provenance covering every released artifact (one
+      # attestation keyed off checksums.txt). Verify with:
+      #   gh attestation verify <archive> --repo justanotherspy/go-template
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-checksums: dist/checksums.txt
 
   promote:
     name: Promote to latest

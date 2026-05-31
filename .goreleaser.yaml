@@ -14,6 +14,10 @@ before:
   hooks:
     - go mod tidy
     - go mod download
+    # Render shell completions (./completions) and man pages (./man) so the
+    # archives below can bundle them. gen-docs is a dev-only tool and is not
+    # built as a release artifact.
+    - go run ./cmd/gen-docs
 
 builds:
   - id: go-template
@@ -42,6 +46,13 @@ archives:
     formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    # Ship docs and the generated completions/man pages alongside the binary.
+    # (Specifying files replaces GoReleaser's defaults, so re-list LICENSE/README.)
+    files:
+      - LICENSE
+      - README.md
+      - completions/*
+      - man/*
     format_overrides:
       - goos: windows
         formats: [zip]
