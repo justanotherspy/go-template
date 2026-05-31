@@ -24,8 +24,11 @@ jobs:
   auto-merge:
     name: Enable auto-merge
     runs-on: ubuntu-latest
-    # Only act on PRs opened by Dependabot.
-    if: github.actor == 'dependabot[bot]'
+    # Only act on PRs opened by Dependabot. Gate on the PR author
+    # (github.event.pull_request.user.login), not github.actor: the latter
+    # reflects whoever last triggered the run (e.g. a manual re-run) and is
+    # spoofable, while the PR author is fixed by GitHub when the PR is opened.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
