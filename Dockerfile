@@ -56,5 +56,7 @@ LABEL org.opencontainers.image.source="https://github.com/justanotherspy/go-temp
 
 COPY --from=build /go-template /usr/bin/go-template
 
-# chainguard/static already defaults to the nonroot (65532) user.
+# Run as the non-root user (65532) that chainguard/static ships with. Set it
+# explicitly so the final image's effective USER is not root.
+USER nonroot
 ENTRYPOINT ["/usr/bin/go-template"]
