@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
-        "Authorization": "Bearer ${GITHUB_MCP_TOKEN}"
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
       }
     },
     "linear": {
@@ -25,7 +25,7 @@
       "type": "http",
       "url": "https://sprites.dev/mcp",
       "headers": {
-        "Authorization": "Bearer ${SPRITES_API_TOKEN}"
+        "Authorization": "Bearer ${SPRITES_TOKEN}"
       }
     },
     "semgrep": {
@@ -39,7 +39,14 @@
       "command": "fly",
       "args": ["mcp", "server"],
       "env": {
-        "FLY_ACCESS_TOKEN": "${FLY_ACCESS_TOKEN:-}"
+        "FLY_API_TOKEN": "${FLY_API_TOKEN:-}"
+      }
+    },
+    "shuck": {
+      "command": "shuck",
+      "args": ["mcp"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
       }
     }
   }
