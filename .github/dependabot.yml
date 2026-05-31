@@ -45,3 +45,20 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  # Docker base images (keeps the Dockerfile's Chainguard tags/digests current)
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    labels:
+      - dependencies
+      - docker
+    groups:
+      docker:
+        patterns:
+          - "*"

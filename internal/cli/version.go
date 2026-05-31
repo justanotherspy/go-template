@@ -13,6 +13,8 @@ func newVersionCmd() *cobra.Command {
 		Short: "Print version information",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			loggerFrom(cmd.Context()).Debug("printing version information", "version", buildInfo.Version)
+
 			out := cmd.OutOrStdout()
 			fmt.Fprintf(out, "go-template %s\n", buildInfo.Version)
 			fmt.Fprintf(out, "  commit:  %s\n", buildInfo.Commit)

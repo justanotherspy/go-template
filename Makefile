@@ -79,6 +79,13 @@ check-tools: ## Verify required tools are installed
 	done; \
 	exit $$missing
 
+.PHONY: hooks
+hooks: ## Install git pre-commit/pre-push hooks (requires pre-commit)
+	@command -v pre-commit >/dev/null 2>&1 || { \
+		echo ">> pre-commit not found; install from https://pre-commit.com"; exit 1; }
+	pre-commit install --install-hooks
+	pre-commit install --hook-type pre-push
+
 .PHONY: golangci-lint
 golangci-lint: ## Install golangci-lint (v2) if missing
 	@command -v golangci-lint >/dev/null 2>&1 || { \
@@ -239,6 +246,38 @@ install: ## go install the binary
 .PHONY: run
 run: ## Run the CLI (pass args via ARGS="...")
 	$(GO) run $(MAIN_PKG) $(ARGS)
+
+# ---- Docs (completions & man pages) -----------------------------------------
+# gen-docs writes both ./completions and ./man; the targets below are aliases so
+# `make completions` / `make man` read naturally. These dirs are bundled into
+# the release archives (see .goreleaser.yaml) and are git-ignored.
+.PHONY: completions
+completions: ## Generate shell completions into ./completions
+	$(GO) run ./cmd/gen-docs
+
+.PHONY: man
+man: ## Generate man pages into ./man
+	$(GO) run ./cmd/gen-docs
+
+.PHONY: dist-extras
+dist-extras: ## Generate completions + man pages
+	$(GO) run ./cmd/gen-docs
+
+# ---- Container --------------------------------------------------------------
+IMAGE     ?= go-template
+IMAGE_TAG ?= dev
+
+.PHONY: docker-build
+docker-build: ## Build a local container image (IMAGE=go-template IMAGE_TAG=dev)
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT) \
+		--build-arg DATE=$(DATE) \
+		-t $(IMAGE):$(IMAGE_TAG) .
+
+.PHONY: docker-run
+docker-run: ## Run the local container image (pass args via ARGS="...")
+	docker run --rm $(IMAGE):$(IMAGE_TAG) $(ARGS)
 
 # ---- Security ---------------------------------------------------------------
 .PHONY: vuln
