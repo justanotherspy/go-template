@@ -1,0 +1,32 @@
+{
+  "go": {
+    "command": "gopls",
+    "args": ["serve"],
+    "extensionToLanguage": {
+      ".go": "go"
+    },
+    "settings": {
+      "gopls": {
+        "staticcheck": true,
+        "analyses": {
+          "nilness": true,
+          "shadow": true,
+          "unusedparams": true,
+          "unusedwrite": true,
+          "useany": true
+        },
+        "hints": {
+          "assignVariableTypes": true,
+          "compositeLiteralFields": true,
+          "constantValues": true,
+          "functionTypeParameters": true,
+          "parameterNames": true,
+          "rangeVariableTypes": true
+        }
+      }
+    },
+    "startupTimeout": 30000,
+    "restartOnCrash": true,
+    "maxRestarts": 3
+  }
+}

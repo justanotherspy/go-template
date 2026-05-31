@@ -127,6 +127,16 @@ imports it.
 `gopls` is the Go language server. `make lsp` installs it, and a `SessionStart`
 hook in `.claude/settings.json` installs it automatically for web sessions.
 
+**Claude Code code intelligence.** `.claude/skills/go-lsp/` is a project-scoped
+[skills-directory plugin](https://code.claude.com/docs/en/plugins-reference#skills-directory-plugins)
+that wires `gopls` into Claude Code via its [`.lsp.json`](.claude/skills/go-lsp/.lsp.json)
+config. Checked into the repo, it loads automatically as `go-lsp@skills-dir` for
+anyone who clones it (after accepting the workspace-trust prompt — project-scope
+LSP servers start only once the workspace is trusted), giving Claude live
+diagnostics after edits, go-to-definition, find-references, and hover/type info.
+It only configures the connection; the `gopls` binary itself comes from `make lsp`
+/ the `SessionStart` hook. Run `/reload-plugins` after editing the config.
+
 ## Release process
 
 1. Merge PRs into `main`. release-drafter keeps a **draft** release updated; its
