@@ -50,7 +50,10 @@ linting, security scanning, and automated releases wired up from day one.
 - All GitHub Actions **pinned to commit SHAs**.
 - **Community health files**: `SECURITY.md`, `CONTRIBUTING.md`, and issue forms.
 - `gopls` LSP, `CLAUDE.md`, and a curated [`.mcp.json`](#mcp-servers-claude-code)
-  preconfigured for Claude Code.
+  preconfigured for Claude Code, plus a project-scoped `go-lsp` plugin
+  ([`.claude/skills/go-lsp/.lsp.json`](.claude/skills/go-lsp/.lsp.json)) that gives
+  Claude Code real-time Go code intelligence (diagnostics, go-to-definition,
+  references, hover) through gopls.
 
 ## Requirements
 
