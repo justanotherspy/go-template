@@ -56,32 +56,27 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          marker='<!-- coverage-report -->'
-          body="$(printf '%s\n%s' "$marker" "$(cat coverage-report.md)")"
-          api="https://api.github.com/repos/$REPO"
-          auth="Authorization: Bearer $GH_TOKEN"
-          accept="Accept: application/vnd.github+json"
-          # Reuse the existing sticky comment (found by its hidden marker) so
-          # each push updates one comment instead of stacking new ones.
-          existing="$(curl -fsS -H "$auth" -H "$accept" \
-            "$api/issues/$PR_NUMBER/comments?per_page=100" \
-            | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty')"
-          payload="$(jq -n --arg body "$body" '{body: $body}')"
-          if [ -n "$existing" ]; then
-            curl -fsS -X PATCH -H "$auth" -H "$accept" \
-              "$api/issues/comments/$existing" -d "$payload" >/dev/null
-            echo "Updated coverage comment on PR #$PR_NUMBER"
-          else
-            curl -fsS -X POST -H "$auth" -H "$accept" \
-              "$api/issues/$PR_NUMBER/comments" -d "$payload" >/dev/null
-            echo "Created coverage comment on PR #$PR_NUMBER"
-          fi
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- coverage-report -->';
+            const body = `${marker}\n${fs.readFileSync('coverage-report.md', 'utf8')}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            // Reuse the existing sticky comment (found by its hidden marker) so
+            // each push updates one comment instead of stacking new ones.
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              core.info(`Updated coverage comment on PR #${issue_number}`);
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+              core.info(`Created coverage comment on PR #${issue_number}`);
+            }
 
   build:
     name: Build
