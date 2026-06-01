@@ -15,6 +15,9 @@
 - name: docker
   color: 1d63ed
   description: Docker images or the Dockerfile
+- name: python
+  color: 3572a5
+  description: Hash-pinned Python CI tools (.github/requirements)
 
 # --- release-drafter categories & autolabeler ---
 - name: feature

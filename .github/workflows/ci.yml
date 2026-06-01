@@ -140,15 +140,15 @@ jobs:
   actionlint:
     name: Actionlint
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - name: Lint workflows (actionlint + shellcheck)
-        uses: reviewdog/action-actionlint@6fb7acc99f4a1008869fa8a0f09cfca740837d9d # v1.72.0
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          reporter: github-check
-          fail_level: error
+          go-version-file: go.mod
+      - name: Lint workflows (actionlint + shellcheck)
+        # Runs the same pinned actionlint as local development (`make
+        # actionlint`); shellcheck is preinstalled on ubuntu-latest runners.
+        # No write permissions needed (unlike check-annotation reporters).
+        run: make actionlint

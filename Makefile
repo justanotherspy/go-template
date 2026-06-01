@@ -28,7 +28,7 @@ GORELEASER_VERSION    := v2.16.0
 GOTESTSUM_VERSION     := v1.13.0
 GOVULNCHECK_VERSION   := latest
 GOPLS_VERSION         := latest
-ACTIONLINT_VERSION    := latest
+ACTIONLINT_VERSION    := v1.7.12
 BENCHSTAT_VERSION     := latest
 
 GO    ?= go

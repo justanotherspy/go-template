@@ -3,13 +3,12 @@
 # Multi-stage build producing a tiny, static, non-root image.
 #
 # The base images are Chainguard's (minimal, low/zero-CVE, continuously rebuilt).
-# They are pinned by tag here and kept current by the `docker` Dependabot
-# ecosystem (.github/dependabot.yml). For stronger supply-chain guarantees you
-# can additionally pin by digest:
+# They are pinned by digest for supply-chain integrity (a tag can be repointed
+# at different content; a digest cannot) and kept current by the `docker`
+# Dependabot ecosystem (.github/dependabot.yml), which bumps the digests as new
+# images are published.
 #
-#   FROM cgr.dev/chainguard/go:latest@sha256:<digest> AS build
-#
-# Resolve the current digest with:
+# Resolve the current digest manually with:
 #
 #   docker buildx imagetools inspect cgr.dev/chainguard/go:latest \
 #     --format '{{.Manifest.Digest}}'
@@ -17,7 +16,7 @@
 # ---- build stage ------------------------------------------------------------
 # --platform=$BUILDPLATFORM keeps the toolchain native; we cross-compile to the
 # requested TARGET* below, so no QEMU emulation is needed.
-FROM --platform=$BUILDPLATFORM cgr.dev/chainguard/go:latest AS build
+FROM --platform=$BUILDPLATFORM cgr.dev/chainguard/go:latest@sha256:9b52ed62e2c49f0c2cc8fd84e9f8985508dd8c4fa14b2e24f3b5822c5613b571 AS build
 
 # Run the build as root so the module cache and output path are writable; this
 # stage is discarded and never shipped.
@@ -47,7 +46,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
       -o /go-template ./cmd/go-template
 
 # ---- runtime stage ----------------------------------------------------------
-FROM cgr.dev/chainguard/static:latest
+FROM cgr.dev/chainguard/static:latest@sha256:77d8b8925dc27970ec2f48243f44c7a260d52c49cd778288e4ee97566e0cb75b
 
 # OCI metadata: lets GHCR, `docker scout`, etc. link the image to its source.
 LABEL org.opencontainers.image.source="https://github.com/justanotherspy/go-template" \

@@ -34,7 +34,9 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install zizmor
-        run: python -m pip install --upgrade zizmor
+        # Hash-pinned for supply-chain integrity; Dependabot (pip ecosystem)
+        # keeps .github/requirements/zizmor.txt current.
+        run: python -m pip install --require-hashes -r .github/requirements/zizmor.txt
       - name: Audit workflows (SARIF)
         env:
           GH_TOKEN: ${{ github.token }}

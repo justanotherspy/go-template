@@ -46,6 +46,24 @@ updates:
         patterns:
           - "*"
 
+  # Python tools installed in CI (keeps the hash-pinned requirements files for
+  # semgrep and zizmor in .github/requirements/ current)
+  - package-ecosystem: pip
+    directory: "/.github/requirements"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    labels:
+      - dependencies
+      - python
+    groups:
+      pip:
+        patterns:
+          - "*"
+
   # Docker base images (keeps the Dockerfile's Chainguard tags/digests current)
   - package-ecosystem: docker
     directory: "/"

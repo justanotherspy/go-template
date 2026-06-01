@@ -12,9 +12,10 @@ name: Dependabot auto-merge
 
 on: pull_request
 
+# Default to read-only; the auto-merge job below escalates to the write
+# permissions it needs.
 permissions:
-  contents: write # enable auto-merge (merges the PR once checks pass)
-  pull-requests: write # mark the PR for auto-merge
+  contents: read
 
 concurrency:
   group: dependabot-auto-merge-${{ github.ref }}
@@ -24,6 +25,9 @@ jobs:
   auto-merge:
     name: Enable auto-merge
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # enable auto-merge (merges the PR once checks pass)
+      pull-requests: write # mark the PR for auto-merge
     # Only act on PRs opened by Dependabot. Gate on the PR author
     # (github.event.pull_request.user.login), not github.actor: the latter
     # reflects whoever last triggered the run (e.g. a manual re-run) and is
