@@ -11,6 +11,8 @@ updates:
     # published (and potentially compromised or buggy) versions can settle.
     cooldown:
       default-days: 7
+    assignees:
+      - justanotherspy
     labels:
       - dependencies
       - go
@@ -38,6 +40,8 @@ updates:
     open-pull-requests-limit: 10
     cooldown:
       default-days: 7
+    assignees:
+      - justanotherspy
     labels:
       - dependencies
       - github-actions
@@ -56,6 +60,8 @@ updates:
     open-pull-requests-limit: 10
     cooldown:
       default-days: 7
+    assignees:
+      - justanotherspy
     labels:
       - dependencies
       - python
@@ -73,6 +79,8 @@ updates:
     open-pull-requests-limit: 10
     cooldown:
       default-days: 7
+    assignees:
+      - justanotherspy
     labels:
       - dependencies
       - docker
