@@ -12,8 +12,7 @@
           "nilness": true,
           "shadow": true,
           "unusedparams": true,
-          "unusedwrite": true,
-          "useany": true
+          "unusedwrite": true
         },
         "hints": {
           "assignVariableTypes": true,
@@ -26,7 +25,6 @@
       }
     },
     "startupTimeout": 30000,
-    "restartOnCrash": true,
     "maxRestarts": 3
   }
 }
