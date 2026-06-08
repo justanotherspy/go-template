@@ -17,7 +17,13 @@
       "Bash(gofmt:*)",
       "Bash(git status)",
       "Bash(git diff:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "mcp__shuck__check_compliance",
+      "mcp__shuck__inspect_action",
+      "mcp__shuck__inspect_images",
+      "mcp__shuck__inspect_logs",
+      "mcp__shuck__inspect_reviews",
+      "mcp__shuck__inspect_security"
     ]
   },
   "env": {
