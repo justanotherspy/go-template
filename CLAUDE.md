@@ -4,13 +4,18 @@ Guidance for Claude Code (and humans) working in this repository.
 
 ## What this is
 
-A template for a Go command-line application built with
+A Go command-line application built with
 [Cobra](https://github.com/spf13/cobra) and
 [Viper](https://github.com/spf13/viper). It ships with CI, linting, security
-scanning, and an automated release pipeline. New repositories created from the
-template are auto-initialized by `.github/workflows/template-cleanup.yml`, which
-rewrites the module path, command directory, and binary name to match the new
-repo.
+scanning, and an automated release pipeline.
+
+<!-- TEMPLATE:START -->
+This repository is a template. New repositories generated from it are
+initialized by `.github/workflows/template-cleanup.yml`, which rewrites the
+module path, command directory, binary name, and config/env prefixes to match
+the new repo and opens a pull request with the result — see "Using this
+template" in `README.md`.
+<!-- TEMPLATE:END -->
 
 ## Layout
 

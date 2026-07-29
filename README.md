@@ -5,19 +5,32 @@
 [![Release](https://img.shields.io/github/v/release/justanotherspy/go-template?sort=semver)](https://github.com/justanotherspy/go-template/releases)
 [![Go Reference](https://pkg.go.dev/badge/github.com/justanotherspy/go-template.svg)](https://pkg.go.dev/github.com/justanotherspy/go-template)
 
-A batteries-included template for building Go command-line tools, with CI,
-linting, security scanning, and automated releases wired up from day one.
+A batteries-included Go command-line tool, with CI, linting, security scanning,
+and automated releases wired up from day one.
 
 <!-- TEMPLATE:START -->
 ## Using this template
 
+This repository is a template — generate a repository from it and everything
+below is renamed to match.
+
 1. Click **Use this template** → **Create a new repository**.
-2. A one-shot GitHub Action (`template-cleanup.yml`) automatically rewrites the
-   module path, command directory, binary name, and `CODEOWNERS` to match your
-   new repository, then deletes itself.
-3. Wait for the `Initialize from template` action to finish and pull the
-   resulting commit.
+2. A one-shot GitHub Action (`template-cleanup.yml`) rewrites the module path,
+   command directory, binary name, config/env prefixes, and `CODEOWNERS` to
+   match your new repository, then opens a **pull request** with the result.
+3. Review and merge that pull request. Delete
+   `.github/workflows/template-cleanup.yml` while you are there — GitHub does
+   not allow an Actions token to touch files under `.github/workflows/`, so the
+   workflow cannot remove itself. Left in place it is harmless: it sees the
+   repository is already initialized and exits.
 4. Start building in `internal/cli/`.
+
+> **For a fully automatic run**, give the workflow a `TEMPLATE_CLEANUP_TOKEN`
+> secret holding a PAT with `repo` + `workflow` scope — an organization secret
+> is inherited by new repositories, or you can add it to the repository and
+> re-run **Actions → Template Cleanup → Run workflow**. With it the workflow
+> deletes itself as part of the pull request, and CI runs on that pull request
+> (GitHub skips workflow runs for pull requests opened with `GITHUB_TOKEN`).
 
 > If you cloned this repo manually instead of using the template button, you can
 > run the same substitutions yourself by replacing `justanotherspy/go-template`
