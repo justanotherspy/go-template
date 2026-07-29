@@ -3,15 +3,37 @@ name: Template Cleanup
 # One-shot workflow that rewrites template placeholders when a new repository
 # is generated from this template. It renames the module path, command
 # directory, and binary to match the new repo, updates CODEOWNERS, strips the
-# template-only README block, then deletes itself. It never runs on the
-# template repository itself (guarded by the `if` below).
+# template-only doc blocks, and opens a pull request with the result. It never
+# runs on the template repository itself (guarded by the `if` below), and it
+# no-ops once the repository has been initialized.
+#
+# Why a pull request instead of a push to main:
+#
+#   * GitHub refuses any push from an Actions token that creates, updates, or
+#     deletes files under `.github/workflows/`, and `workflows` is not a
+#     permission `GITHUB_TOKEN` can be granted. So this job must leave the
+#     workflow files alone — including this one — and the rewrite below skips
+#     `.github/workflows/` entirely.
+#   * A pull request also works on repositories whose default branch is
+#     protected, and it gives you a diff to review before the rename lands.
+#
+# Because this workflow cannot delete itself, the pull request asks you to
+# delete `.github/workflows/template-cleanup.yml` by hand. Until you do, the
+# job stays a cheap no-op: the "already initialized" check below exits early.
+#
+# Optional: set a `TEMPLATE_CLEANUP_TOKEN` secret to a PAT with `repo` +
+# `workflow` scope before generating the repository. When present it is used
+# instead of `GITHUB_TOKEN`, this workflow deletes itself as part of the pull
+# request, and the pull request's CI checks run normally (GitHub does not run
+# workflows for pull requests opened by `GITHUB_TOKEN`).
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
-# Default to read-only; the cleanup job below escalates to contents: write
-# (it must push the rewritten template back to the new repository).
+# Default to read-only; the cleanup job below escalates to contents: write +
+# pull-requests: write (it pushes a branch and opens the initialization PR).
 permissions:
   contents: read
 
@@ -22,37 +44,80 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
-      # This one-shot job commits and pushes the rewritten template back to the
-      # new repo (see "Commit changes"), so the checkout must keep its
-      # credentials; persist-credentials: false would break the push.
+      # This one-shot job pushes the rewritten template back to the new repo on
+      # a branch (see "Open initialization pull request"), so the checkout must
+      # keep its credentials; persist-credentials: false would break the push.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
+          token: ${{ secrets.TEMPLATE_CLEANUP_TOKEN || secrets.GITHUB_TOKEN }}
+
+      # Idempotence guard: once the module path no longer names the template,
+      # the repository has been initialized and every step below is skipped.
+      - name: Check whether initialization is needed
+        id: check
+        env:
+          TEMPLATE_FULL: justanotherspy/go-template
+        run: |
+          set -euo pipefail
+          if grep -q "$TEMPLATE_FULL" go.mod; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "Already initialized from the template — nothing to do." \
+              >> "$GITHUB_STEP_SUMMARY"
+            echo "You can delete .github/workflows/template-cleanup.yml." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Rewrite template placeholders
+        if: steps.check.outputs.needed == 'true'
         env:
           REPO_FULL: ${{ github.repository }}
           REPO_OWNER: ${{ github.repository_owner }}
+          HAS_PAT: ${{ secrets.TEMPLATE_CLEANUP_TOKEN != '' }}
         run: |
           set -euo pipefail
           REPO_NAME="${REPO_FULL#*/}"
           TEMPLATE_FULL="justanotherspy/go-template"
           TEMPLATE_NAME="go-template"
 
+          # Text files containing <pattern>, minus everything under
+          # .github/workflows/: an Actions token may not modify workflow files,
+          # and one such file in the commit rejects the whole push. Nothing
+          # under .github/workflows/ names the template, by design — and this
+          # workflow must not rewrite the patterns in its own script either.
+          matching() {
+            grep -rlI --exclude-dir=.git "$1" . \
+              | grep -v '^\./\.github/workflows/' || true
+          }
+
+          # Replace <from> with <to> in every file that mentions it.
+          rewrite() {
+            local files
+            files="$(matching "$1")"
+            if [ -n "$files" ]; then
+              printf '%s\n' "$files" | xargs -r sed -i "s#${1}#${2}#g"
+            fi
+          }
+
           # 1. Replace the full module path (owner/repo) everywhere.
-          grep -rlI --exclude-dir=.git "$TEMPLATE_FULL" . \
-            | xargs -r sed -i "s#${TEMPLATE_FULL}#${REPO_FULL}#g"
+          rewrite "$TEMPLATE_FULL" "$REPO_FULL"
 
-          # 2. Rename the command directory to match the new repo name.
-          if [ "$REPO_NAME" != "$TEMPLATE_NAME" ] && [ -d "cmd/${TEMPLATE_NAME}" ]; then
-            git mv "cmd/${TEMPLATE_NAME}" "cmd/${REPO_NAME}"
-          fi
-
-          # 3. Replace remaining bare references to the template name.
           if [ "$REPO_NAME" != "$TEMPLATE_NAME" ]; then
-            grep -rlI --exclude-dir=.git "$TEMPLATE_NAME" . \
-              | xargs -r sed -i "s#${TEMPLATE_NAME}#${REPO_NAME}#g"
+            # 2. Rename the paths that carry the template name: the command
+            #    directory and the example config file.
+            if [ -d "cmd/${TEMPLATE_NAME}" ]; then
+              git mv "cmd/${TEMPLATE_NAME}" "cmd/${REPO_NAME}"
+            fi
+            if [ -f ".${TEMPLATE_NAME}.yaml.example" ]; then
+              git mv ".${TEMPLATE_NAME}.yaml.example" ".${REPO_NAME}.yaml.example"
+            fi
+
+            # 3. Replace remaining bare references to the template name.
+            rewrite "$TEMPLATE_NAME" "$REPO_NAME"
           fi
 
           # 3b. Replace the upper-case env-var prefix (viper SetEnvPrefix in
@@ -63,8 +128,7 @@ jobs:
           REPO_ENV="$(printf '%s' "$REPO_NAME" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_')"
           REPO_ENV="${REPO_ENV%_}"
           if [ "$REPO_ENV" != "$TEMPLATE_ENV" ]; then
-            grep -rlI --exclude-dir=.git "$TEMPLATE_ENV" . \
-              | xargs -r sed -i "s#${TEMPLATE_ENV}#${REPO_ENV}#g"
+            rewrite "$TEMPLATE_ENV" "$REPO_ENV"
           fi
 
           # 4. Point CODEOWNERS and Dependabot assignees at the new repository owner.
@@ -75,21 +139,103 @@ jobs:
             sed -i "s#- justanotherspy#- ${REPO_OWNER}#g" .github/dependabot.yml
           fi
 
-          # 5. Strip the template-only README block.
-          if [ -f README.md ]; then
-            sed -i '/<!-- TEMPLATE:START -->/,/<!-- TEMPLATE:END -->/d' README.md
+          # 5. Strip the template-only doc blocks (README.md, CLAUDE.md), then
+          #    squeeze the blank lines the deletion leaves behind.
+          marked="$(matching '<!-- TEMPLATE:START -->')"
+          if [ -n "$marked" ]; then
+            printf '%s\n' "$marked" | while read -r f; do
+              sed -i '/<!-- TEMPLATE:START -->/,/<!-- TEMPLATE:END -->/d' "$f"
+              # Separate pass: `N` in the squeeze would swallow a marker line
+              # that follows a blank one, and the range above would never open.
+              sed -i '/^$/{N;/^\n$/D}' "$f"
+            done
           fi
 
-          # 6. Remove this one-shot workflow.
-          git rm -f .github/workflows/template-cleanup.yml
+          # 6. Remove this one-shot workflow — only possible with a PAT that
+          #    carries the `workflow` scope (see the header comment).
+          if [ "$HAS_PAT" = "true" ]; then
+            git rm -f .github/workflows/template-cleanup.yml
+          fi
 
-      - name: Commit changes
+      - name: Open initialization pull request
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.TEMPLATE_CLEANUP_TOKEN || secrets.GITHUB_TOKEN }}
+          HAS_PAT: ${{ secrets.TEMPLATE_CLEANUP_TOKEN != '' }}
+          REPO_FULL: ${{ github.repository }}
+          BASE: ${{ github.event.repository.default_branch }}
+          SERVER_URL: ${{ github.server_url }}
         run: |
           set -euo pipefail
+          BRANCH="chore/initialize-from-template"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ -n "$(git status --porcelain)" ]; then
-            git add -A
-            git commit -m "chore: initialize project from go-template"
-            git push
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore: initialize project from go-template"
+          # The branch is owned by this workflow; force is safe and lets a
+          # re-run replace the branch left by an earlier failed attempt.
+          git push --force origin "HEAD:refs/heads/${BRANCH}"
+
+          COMPARE_URL="${SERVER_URL}/${REPO_FULL}/compare/${BASE}...${BRANCH}?expand=1"
+
+          {
+            echo "Review and merge this pull request to finish initializing the"
+            echo "repository from the template. It renames the module path, the"
+            echo "command directory, the binary, and the config/env prefixes to"
+            echo "match \`${REPO_FULL}\`."
+            echo
+            if [ "$HAS_PAT" != "true" ]; then
+              echo "Two things this workflow could not do on its own, because"
+              echo "\`GITHUB_TOKEN\` may not touch files under"
+              echo "\`.github/workflows/\`:"
+              echo
+              echo "1. **Delete \`.github/workflows/template-cleanup.yml\`.**"
+              echo "   Please delete it in this pull request (or right after"
+              echo "   merging). Left in place it is harmless — it detects that"
+              echo "   the repository is already initialized and exits."
+              echo "2. **Run the CI checks on this pull request.** GitHub does"
+              echo "   not run workflows for pull requests opened by"
+              echo "   \`GITHUB_TOKEN\`. Push any commit to this branch (for"
+              echo "   example the deletion above) to trigger them."
+              echo
+              echo "Both are avoidable next time by setting a"
+              echo "\`TEMPLATE_CLEANUP_TOKEN\` secret to a PAT with \`repo\` +"
+              echo "\`workflow\` scope before generating the repository."
+            fi
+          } > "${RUNNER_TEMP}/pr-body.md"
+
+          if PR_URL="$(gh pr view "$BRANCH" --json url --jq .url 2>/dev/null)"; then
+            echo "Updated existing pull request: ${PR_URL}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if PR_URL="$(gh pr create \
+            --base "$BASE" \
+            --head "$BRANCH" \
+            --title "chore: initialize project from go-template" \
+            --body-file "${RUNNER_TEMP}/pr-body.md")"; then
+            echo "Opened pull request: ${PR_URL}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            # Most likely cause: "Allow GitHub Actions to create and approve
+            # pull requests" is disabled for the repository or organization.
+            # The branch is pushed either way, so just hand over the link.
+            echo "::warning::Could not open the pull request automatically. Open it from ${COMPARE_URL}"
+            {
+              echo "### Initialization branch pushed"
+              echo
+              echo "Could not open the pull request automatically — most likely"
+              echo "\"Allow GitHub Actions to create and approve pull requests\""
+              echo "is disabled for this repository or organization."
+              echo
+              echo "The \`${BRANCH}\` branch is pushed; open the pull request here:"
+              echo
+              echo "${COMPARE_URL}"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
