@@ -9,7 +9,7 @@ go 1.26.0
 toolchain go1.26.5
 
 require (
-	github.com/rogpeppe/go-internal v1.15.0
+	github.com/rogpeppe/go-internal v1.16.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 )
