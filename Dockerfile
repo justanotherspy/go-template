@@ -16,7 +16,7 @@
 # ---- build stage ------------------------------------------------------------
 # --platform=$BUILDPLATFORM keeps the toolchain native; we cross-compile to the
 # requested TARGET* below, so no QEMU emulation is needed.
-FROM --platform=$BUILDPLATFORM cgr.dev/chainguard/go:latest@sha256:87f98746b75cef20b2d6c568d834a464f40b858ee09f3bdca51654b3f314c641 AS build
+FROM --platform=$BUILDPLATFORM cgr.dev/chainguard/go:latest@sha256:b6739aa73803ae4a9e11e6bb4e201c6c6caeaccbbcb251cc9426c47b240055b1 AS build
 
 # Run the build as root so the module cache and output path are writable; this
 # stage is discarded and never shipped.
@@ -46,7 +46,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
       -o /go-template ./cmd/go-template
 
 # ---- runtime stage ----------------------------------------------------------
-FROM cgr.dev/chainguard/static:latest@sha256:24dd7ff8788fdfadda39eeeaefefb6d1cec6002a545935a5f7e017484053734f
+FROM cgr.dev/chainguard/static:latest@sha256:96d02f455d5a73b817c0602910748609cf8471b1cc9522f78c75cedb1f67d072
 
 # OCI metadata: lets GHCR, `docker scout`, etc. link the image to its source.
 LABEL org.opencontainers.image.source="https://github.com/justanotherspy/go-template" \
