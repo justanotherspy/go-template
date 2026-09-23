@@ -6,6 +6,9 @@
 - name: dependencies
   color: 0366d6
   description: Dependency updates
+- name: major
+  color: e99695
+  description: Major dependency update (Renovate; never automerged)
 - name: go
   color: 00add8
   description: Go modules / language
