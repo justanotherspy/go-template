@@ -59,7 +59,10 @@ below is renamed to match.
   `checksums.txt` is cosign-signed (keyless) and each archive ships an SPDX SBOM.
 - **Distribution**: GoReleaser publishes a Homebrew cask to a shared tap, and
   `install.sh` downloads a checksum-verified binary in one line.
-- **Dependabot** for Go modules and GitHub Actions, with update groups.
+- **Renovate** (extending the shared `justanotherspy/renovate` preset) for Go
+  modules and the Go toolchain, GitHub Actions, Docker base-image digests, the
+  hash-pinned Python CI tools, the Makefile tool pins, and pre-commit hooks.
+  Non-major updates are grouped and automerged; majors get their own PR.
 - All GitHub Actions **pinned to commit SHAs**.
 - **Community health files**: `SECURITY.md`, `CONTRIBUTING.md`, and issue forms.
 - `gopls` LSP, `CLAUDE.md`, and a curated [`.mcp.json`](#mcp-servers-claude-code)

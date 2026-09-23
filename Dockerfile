@@ -4,9 +4,8 @@
 #
 # The base images are Chainguard's (minimal, low/zero-CVE, continuously rebuilt).
 # They are pinned by digest for supply-chain integrity (a tag can be repointed
-# at different content; a digest cannot) and kept current by the `docker`
-# Dependabot ecosystem (.github/dependabot.yml), which bumps the digests as new
-# images are published.
+# at different content; a digest cannot) and kept current by Renovate
+# (renovate.json), which bumps the digests as new images are published.
 #
 # Resolve the current digest manually with:
 #
