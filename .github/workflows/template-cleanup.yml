@@ -131,12 +131,9 @@ jobs:
             rewrite "$TEMPLATE_ENV" "$REPO_ENV"
           fi
 
-          # 4. Point CODEOWNERS and Dependabot assignees at the new repository owner.
+          # 4. Point CODEOWNERS at the new repository owner.
           if [ -f .github/CODEOWNERS ]; then
             sed -i "s#@justanotherspy#@${REPO_OWNER}#g" .github/CODEOWNERS
-          fi
-          if [ -f .github/dependabot.yml ]; then
-            sed -i "s#- justanotherspy#- ${REPO_OWNER}#g" .github/dependabot.yml
           fi
 
           # 5. Strip the template-only doc blocks (README.md, CLAUDE.md), then
