@@ -15,7 +15,7 @@
 # ---- build stage ------------------------------------------------------------
 # --platform=$BUILDPLATFORM keeps the toolchain native; we cross-compile to the
 # requested TARGET* below, so no QEMU emulation is needed.
-FROM --platform=$BUILDPLATFORM cgr.dev/chainguard/go:latest@sha256:504c1ccea69dc70518825cdb5970c4ed1940ce9927106ece59478e2c1fd98a31 AS build
+FROM --platform=$BUILDPLATFORM cgr.dev/chainguard/go:latest@sha256:b49aac675fb8613c532b0dd60492f2afa8af358590817d8cede2e5c4c47bd0e3 AS build
 
 # Run the build as root so the module cache and output path are writable; this
 # stage is discarded and never shipped.
